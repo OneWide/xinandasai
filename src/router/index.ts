@@ -15,13 +15,28 @@ const routes: RouteRecordRaw[] = [
         component: Home,
         children: [
             {
+                path: '/theme',
+                name: 'theme',
+                meta: {
+                    title: '系统主页',
+                    permiss: '7',
+                },
+                // 添加空组件占位（假设项目中已有空组件）
+                component: () => import(/* webpackChunkName: "empty" */ '../views/empty.vue'),
+                beforeEnter: (to, from, next) => {
+                    // 修正路径：假设demo.html在public目录下，使用绝对路径
+                    window.location.href = '/xinandasai/demo.html';
+                    next(false); // 阻止继续导航到当前路由的component
+                }
+            },
+            {
                 path: '/dashboard',
                 name: 'dashboard',
                 meta: {
-                    title: '系统首页',
+                    title: '系统信息',
                     noAuth: true,
                 },
-                component: () => import(/* webpackChunkName: "dashboard" */ '../views/dashboard.vue'),
+                component: () => import(/* webpackChunkName: "dashboard" */ '../views/test/network.vue'),
             },
             {
                 path: '/system-user',
@@ -91,10 +106,10 @@ const routes: RouteRecordRaw[] = [
                 path: '/icon',
                 name: 'icon',
                 meta: {
-                    title: '图标',
+                    title: '详细数据',
                     permiss: '5',
                 },
-                component: () => import(/* webpackChunkName: "icon" */ '../views/pages/icon.vue'),
+                component: () => import(/* webpackChunkName: "icon" */ '../views/test/test.vue'),
             },
             {
                 path: '/ucenter',
@@ -140,15 +155,7 @@ const routes: RouteRecordRaw[] = [
                 },
                 component: () => import(/* webpackChunkName: "import" */ '../views/table/import.vue'),
             },
-            {
-                path: '/theme',
-                name: 'theme',
-                meta: {
-                    title: '主题设置',
-                    permiss: '7',
-                },
-                component: () => import(/* webpackChunkName: "theme" */ '../views/pages/theme.vue'),
-            },
+
             {
                 path: '/calendar',
                 name: 'calendar',
@@ -273,17 +280,7 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
     NProgress.start();
-    const role = localStorage.getItem('vuems_name');
-    const permiss = usePermissStore();
-
-    if (!role && to.meta.noAuth !== true) {
-        next('/login');
-    } else if (typeof to.meta.permiss == 'string' && !permiss.key.includes(to.meta.permiss)) {
-        // 如果没有权限，则进入403
-        next('/403');
-    } else {
-        next();
-    }
+    next();
 });
 
 router.afterEach(() => {

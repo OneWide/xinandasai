@@ -2,8 +2,14 @@ import { Menus } from '@/types/menu';
 
 export const menuData: Menus[] = [
     {
+        id: '7',
+        icon: 'Brush',
+        index: '/theme',
+        title: '系统主页',
+    },
+    {
         id: '0',
-        title: '系统首页',
+        title: '系统信息',
         index: '/dashboard',
         icon: 'Odometer',
     },
@@ -163,17 +169,12 @@ export const menuData: Menus[] = [
     },
     {
         id: '5',
-        icon: 'Guide',
+        icon: 'DataLine',
         index: '/icon',
-        title: '图标',
+        title: '详细数据',
         permiss: '5',
     },
-    {
-        id: '7',
-        icon: 'Brush',
-        index: '/theme',
-        title: '主题',
-    },
+
     {
         id: '6',
         icon: 'DocumentAdd',
