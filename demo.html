@@ -1,0 +1,1636 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高隐蔽性群签名隐匿网络</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.137.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.137.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            overflow: hidden;
+            background-color: #0c0c14;
+            color: #e0e0e0;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        #interface {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #header {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #2a2a40;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            color: #5e9cf9;
+            text-shadow: 0 0 10px rgba(94, 156, 249, 0.5);
+            text-align: center;
+        }
+        h2{
+            text-align: center;
+        }
+        
+        #main-content {
+            display: flex;
+            flex: 1;
+        }
+        
+        #sidebar {
+            width: 280px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 1px solid #2a2a40;
+            pointer-events: auto;
+        }
+        
+        #process-steps {
+            margin-top: 20px;
+        }
+        
+        .step {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background: rgba(30, 30, 50, 0.5);
+            border-left: 3px solid #5e9cf9;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .step:hover {
+            background: rgba(40, 40, 70, 0.7);
+            transform: translateX(5px);
+        }
+        
+        .step.active {
+            background: rgba(50, 50, 90, 0.7);
+            border-left: 3px solid #ff5e87;
+        }
+        
+        .step-title {
+            font-weight: bold;
+            color: #5e9cf9;
+            margin-bottom: 5px;
+        }
+        
+        .step-description {
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+        
+        .control-btn {
+            padding: 10px 20px;
+            background: rgba(94, 156, 249, 0.2);
+            border: 1px solid #5e9cf9;
+            color: #5e9cf9;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .control-btn:hover {
+            background: rgba(94, 156, 249, 0.4);
+        }
+        
+        #info-panel {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            width: 300px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #2a2a40;
+            pointer-events: auto;
+            display: none;
+        }
+        
+        #info-panel.visible {
+            display: block;
+        }
+        
+        #info-title {
+            color: #5e9cf9;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        #file-upload {
+            position: absolute;
+            bottom: 20px;
+            left: 320px;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        #file-input {
+            display: none;
+        }
+        
+        .upload-btn {
+            padding: 10px 20px;
+            background: rgba(94, 156, 249, 0.2);
+            border: 1px solid #5e9cf9;
+            color: #5e9cf9;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-btn:hover {
+            background: rgba(94, 156, 249, 0.4);
+        }
+        
+        #file-name {
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+        
+        .data-indicator {
+            position: absolute;
+            padding: 5px 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            font-size: 0.8rem;
+            color: #5e9cf9;
+            pointer-events: none;
+            display: none;
+        }
+        
+        .data-indicator.visible {
+            display: block;
+        }
+        
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            pointer-events: auto;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .obfuscation-effect {
+            position: absolute;
+            pointer-events: none;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0) 70%);
+            animation: pulse 3s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 0.2; }
+            100% { transform: scale(1); opacity: 0.5; }
+        }
+        
+        @media (max-width: 768px) {
+            #sidebar {
+                width: 100%;
+                height: 40%;
+                border-right: none;
+                border-top: 1px solid #2a2a40;
+                position: absolute;
+                bottom: 0;
+            }
+            
+            #file-upload {
+                left: 20px;
+                bottom: calc(40% + 30px);
+            }
+            
+            #controls {
+                right: 20px;
+                bottom: calc(40% + 30px);
+            }
+            
+            .legend {
+                bottom: calc(40% + 30px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div id="interface">
+        <div id="header">
+            <h1>高隐蔽性群签名隐匿网络</h1>
+            <p>安全、匿名、群签名认证的不可追踪数据传输解决方案</p>
+        </div>
+        
+        <div id="main-content">
+            <div id="sidebar">
+                <h2>系统流程</h2>
+                <div id="process-steps">
+                    <div class="step active" data-step="1">
+                        <div class="step-title">1. 群签名加密</div>
+                        <div class="step-description">
+                            将输入文件转为二进制流，通过群签名认证发送方身份，隐藏发送者具体身份信息，通过公钥加密数据。
+                        </div>
+                    </div>
+                    
+                    <div class="step" data-step="2">
+                        <div class="step-title">2. 自适应多路径路由</div>
+                        <div class="step-description">
+                            门户路由器验证群签名后将数据分片，利用自适应多路径路由技术动态选择随机路径，采用抗指纹识别的流量混淆技术。
+                        </div>
+                    </div>
+                    
+                    <div class="step" data-step="3">
+                        <div class="step-title">3. 广播接收与解密</div>
+                        <div class="step-description">
+                            接入点广播方式向潜在接收方群发送流量，隐藏真实接收方信息，只有目标接收方可验证并解密获取安全数据。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="file-upload">
+            <input type="file" id="file-input">
+            <label for="file-input" class="upload-btn">选择文件</label>
+            <span id="file-name">未选择文件</span>
+        </div>
+        
+        <div id="controls">
+            <button class="control-btn" id="start-btn">
+                <svg t="1742371422386" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2806" width="32" height="32"><path d="M437.527273 297.890909c-20.945455-11.636364-48.872727-11.636364-69.818182 0-20.945455 11.636364-34.909091 34.909091-34.909091 60.509091v307.2c0 25.6 13.963636 48.872727 34.909091 60.509091 11.636364 6.981818 23.272727 9.309091 34.909091 9.309091s23.272727-2.327273 34.909091-9.309091l267.636363-153.6c20.945455-11.636364 34.909091-34.909091 34.909091-60.509091s-13.963636-48.872727-34.909091-60.509091l-267.636363-153.6z m242.036363 235.054546l-267.636363 153.6c-11.636364 6.981818-20.945455 2.327273-23.272728 0-4.654545-2.327273-11.636364-6.981818-11.636363-20.945455V358.4c0-11.636364 6.981818-18.618182 11.636363-20.945455 2.327273-2.327273 6.981818-2.327273 11.636364-2.327272 2.327273 0 6.981818 0 11.636364 2.327272l267.636363 153.6c11.636364 6.981818 11.636364 16.290909 11.636364 20.945455s0 13.963636-11.636364 20.945455z" fill="#1296db" p-id="2807"></path><path d="M923.927273 209.454545c-6.981818-9.309091-23.272727-11.636364-32.581818-4.654545-9.309091 6.981818-11.636364 23.272727-4.654546 32.581818C947.2 316.509091 977.454545 411.927273 977.454545 512c0 256-209.454545 465.454545-465.454545 465.454545S46.545455 768 46.545455 512 256 46.545455 512 46.545455c100.072727 0 195.490909 30.254545 274.618182 90.763636 9.309091 6.981818 25.6 4.654545 32.581818-4.654546s4.654545-25.6-4.654545-32.581818C726.109091 34.909091 621.381818 0 512 0 230.4 0 0 230.4 0 512s230.4 512 512 512 512-230.4 512-512c0-109.381818-34.909091-214.109091-100.072727-302.545455z" fill="#1296db" p-id="2808"></path></svg>
+                开始模拟
+            </button>
+            <button class="control-btn" id="reset-btn">
+              <svg t="1742371503319" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4918" width="32" height="32"><path d="M181.731 569.606l63.275-8.713A331.732 331.732 0 0 1 242.255 501l-63.809-2.835a395.86 395.86 0 0 0 3.285 71.441z" fill="#1296db" p-id="4919"></path><path d="M569.205 906.945c52.791 0 104.019-10.346 152.263-30.752 46.581-19.703 88.409-47.902 124.321-83.814 35.912-35.912 64.111-77.74 83.814-124.322 20.405-48.244 30.752-99.471 30.752-152.263 0-52.791-10.346-104.019-30.752-152.263-19.703-46.581-47.902-88.409-83.814-124.321-35.912-35.912-77.74-64.111-124.321-83.814-48.244-20.405-99.472-30.752-152.263-30.752-101.406 0-197.547 38.644-270.712 108.813-72.938 69.952-115.572 163.96-120.047 264.706L242.255 501c7.783-175.224 151.397-312.483 326.95-312.483 180.462 0 327.278 146.817 327.278 327.278S749.667 843.074 569.205 843.074c-69.625 0-136.091-21.563-192.21-62.357L339.44 832.38c67.106 48.781 146.558 74.565 229.765 74.565z" fill="#1296db" p-id="4920"></path><path d="M222.367 629.329c8.173 0 16.346-3.118 22.581-9.354l117.233-117.232c12.472-12.471 12.472-32.692 0-45.164-12.471-12.472-32.692-12.472-45.163 0L199.786 574.811c-12.472 12.472-12.472 32.693 0 45.164 6.236 6.236 14.409 9.354 22.581 9.354z" fill="#1296db" p-id="4921"></path><path d="M215.632 631.398c8.174 0 16.345-3.117 22.581-9.354 12.472-12.471 12.472-32.692 0-45.164L120.981 459.648c-12.47-12.471-32.691-12.471-45.163 0-12.472 12.472-12.472 32.692 0 45.164l117.233 117.232c6.234 6.235 14.409 9.354 22.581 9.354z" fill="#1296db" p-id="4922"></path></svg>
+                重置
+            </button>
+        </div>
+        
+        <div id="info-panel">
+            <div id="info-title">节点信息</div>
+            <div id="info-content"></div>
+        </div>
+        
+        <div class="data-indicator" id="data-indicator"></div>
+        
+        <div class="legend">
+            <h4 style="margin-bottom: 8px;">图例说明</h4>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #5e9cf9;"></div>
+                <span>发送方群</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #e650de;"></div>
+                <span>加密数据</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #62de89;"></div>
+                <span>路由节点</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #f9ce5e;"></div>
+                <span>门户路由器</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #ff5e87;"></div>
+                <span>潜在接收方</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #ffffff;"></div>
+                <span>接入点AP</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Three.js 变量
+        let scene, camera, renderer, controls;
+        let nodes = [], links = [], dataParts = [], obfuscationEffects = [];
+        let senderGroup = [], receiverGroup = [], accessPoints = [];
+        let actualSender = null, actualReceiver = null;
+        let gatewayRouter = null;
+        let groupSignatureSphere = null;
+        let groupSignaturePoint = null;
+        let currentStep = 1;
+        let animationInProgress = false;
+        let selectedFile = null;
+        
+        // 节点类型
+        const NodeType = {
+            SENDER: 'sender',
+            ACTUAL_SENDER: 'actual_sender',
+            RECEIVER: 'receiver',
+            ACTUAL_RECEIVER: 'actual_receiver',
+            ROUTER: 'router',
+            GATEWAY_ROUTER: 'gateway_router',
+            ACCESS_POINT: 'access_point',
+            GROUP_POINT: 'group_point'
+        };
+        
+        // 初始化
+        function init() {
+            // 创建场景
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0c0c14);
+            
+            // 创建相机
+            camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 100, 300); // 调整相机位置以获得更好的3D视角
+            
+            // 创建渲染器
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            // 添加轨道控制
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            // 添加灯光
+            const ambientLight = new THREE.AmbientLight(0x404040, 1);
+            scene.add(ambientLight);
+            
+            const pointLight = new THREE.PointLight(0x5e9cf9, 2);
+            pointLight.position.set(100, 100, 100);
+            scene.add(pointLight);
+            
+            const pointLight2 = new THREE.PointLight(0xff5e87, 1.5);
+            pointLight2.position.set(-100, -50, -80);
+            scene.add(pointLight2);
+            
+            // 创建网络拓扑
+            createNetworkTopology();
+            
+            // 开始渲染循环
+            animate();
+            
+            // 添加窗口大小变化监听
+            window.addEventListener('resize', onWindowResize);
+            
+            // 添加步骤点击事件
+            document.querySelectorAll('.step').forEach(step => {
+                step.addEventListener('click', () => {
+                    const stepId = parseInt(step.getAttribute('data-step'));
+                    showStep(stepId);
+                });
+            });
+            
+            // 添加开始模拟按钮事件
+            document.getElementById('start-btn').addEventListener('click', startSimulation);
+            
+            // 添加重置按钮事件
+            document.getElementById('reset-btn').addEventListener('click', resetSimulation);
+            
+            // 添加文件选择事件
+            document.getElementById('file-input').addEventListener('change', function(e) {
+                const fileInput = e.target;
+                if (fileInput.files.length > 0) {
+                    selectedFile = fileInput.files[0];
+                    document.getElementById('file-name').textContent = selectedFile.name;
+                }
+            });
+        }
+        
+        // 创建网络拓扑
+        function createNetworkTopology() {
+            // 清除现有节点和连接
+            nodes.forEach(node => scene.remove(node.mesh));
+            links.forEach(link => scene.remove(link.line));
+            
+            if (groupSignatureSphere) {
+                scene.remove(groupSignatureSphere);
+                groupSignatureSphere = null;
+            }
+            
+            if (groupSignaturePoint) {
+                scene.remove(groupSignaturePoint.mesh);
+                groupSignaturePoint = null;
+            }
+            
+            nodes = [];
+            links = [];
+            senderGroup = [];
+            receiverGroup = [];
+            accessPoints = [];
+            actualSender = null;
+            actualReceiver = null;
+            gatewayRouter = null;
+            
+            // 创建发送方群组 - 在三维空间内分布
+            const senderCount = 7;
+            const senderCenterX = -150;
+            const senderCenterY = 20;
+            const senderCenterZ = 0;
+            const senderRadius = 40;
+            
+            for (let i = 0; i < senderCount; i++) {
+                // 使用球坐标系确保更好的3D分布
+                const phi = Math.acos(-1 + (2 * i) / senderCount);
+                const theta = Math.sqrt(senderCount * Math.PI) * phi;
+                
+                const x = senderCenterX + senderRadius * Math.sin(phi) * Math.cos(theta);
+                const y = senderCenterY + senderRadius * Math.sin(phi) * Math.sin(theta);
+                const z = senderCenterZ + senderRadius * Math.cos(phi);
+                
+                const sender = createNode(
+                    NodeType.SENDER, 
+                    new THREE.Vector3(x, y, z), 
+                    0x5e9cf9,
+                    i == 0 ? 5 : 3.5 // 第一个节点稍大，可能成为实际发送者
+                );
+                nodes.push(sender);
+                senderGroup.push(sender);
+            }
+            
+            // 随机选择一个发送方作为实际发送方
+            const senderIndex = Math.floor(Math.random() * senderGroup.length);
+            actualSender = senderGroup[senderIndex];
+            actualSender.type = NodeType.ACTUAL_SENDER;
+            
+            // 创建门户路由器 - 特殊形状，距离发送方群最近
+            const gatewayX = senderCenterX + senderRadius * 2.5;
+            const gatewayY = senderCenterY;
+            const gatewayZ = senderCenterZ;
+            
+            gatewayRouter = createNode(
+                NodeType.GATEWAY_ROUTER, 
+                new THREE.Vector3(gatewayX, gatewayY, gatewayZ), 
+                0xf9ce5e,
+                7,
+                'dodecahedron' // 使用十二面体作为门户路由器形状
+            );
+            nodes.push(gatewayRouter);
+            
+            // 创建群签名效果 - 半透明球体
+            const groupGeometry = new THREE.SphereGeometry(senderRadius * 1.3, 32, 32);
+            const groupMaterial = new THREE.MeshBasicMaterial({
+                color: 0x5e9cf9,
+                transparent: true,
+                opacity: 0.15,
+                wireframe: true
+            });
+            
+            groupSignatureSphere = new THREE.Mesh(groupGeometry, groupMaterial);
+            groupSignatureSphere.position.set(senderCenterX, senderCenterY, senderCenterZ);
+            scene.add(groupSignatureSphere);
+            
+            // 创建群签名聚合点 - 在群体球面上朝向门户路由器的点
+            // 计算从群中心到门户路由器的方向向量
+            const direction = new THREE.Vector3();
+            direction.subVectors(gatewayRouter.position, groupSignatureSphere.position);
+            direction.normalize();
+            
+            // 在该方向上的球面位置创建群签名点
+            const pointPosition = new THREE.Vector3();
+            pointPosition.copy(groupSignatureSphere.position);
+            pointPosition.addScaledVector(direction, senderRadius * 1.3); // 位于球面上
+            
+            groupSignaturePoint = createNode(
+                NodeType.GROUP_POINT, 
+                pointPosition, 
+                0x7ebbff, // 略亮一点的蓝色
+                2, // 较小的尺寸
+                'sphere'
+            );
+            nodes.push(groupSignaturePoint);
+            
+            // 连接群签名点与门户路由器
+            createLink(groupSignaturePoint, gatewayRouter);
+            
+            // 创建中间路由节点 - 在三维空间内广泛分布
+            const routerCount = 35;
+            
+            for (let i = 0; i < routerCount; i++) {
+                // 使用球坐标系创建路由器节点
+                const radius = 70 + Math.random() * 40;
+                const phi = Math.PI * Math.random();
+                const theta = 2 * Math.PI * Math.random();
+                
+                const x = radius * Math.sin(phi) * Math.cos(theta);
+                const y = radius * Math.sin(phi) * Math.sin(theta);
+                const z = radius * Math.cos(phi);
+                
+                const router = createNode(
+                    NodeType.ROUTER, 
+                    new THREE.Vector3(x, y, z), 
+                    0x62de89,
+                    3.5,
+                    'octahedron'
+                );
+                nodes.push(router);
+            }
+            
+            // 创建接收方群组 - 在三维空间内分布
+            const receiverCount = 8;
+            const receiverCenterX = 150;
+            const receiverCenterY = -20;
+            const receiverCenterZ = 0;
+            const receiverRadius = 40;
+            
+            for (let i = 0; i < receiverCount; i++) {
+                const phi = Math.acos(-1 + (2 * i) / receiverCount);
+                const theta = Math.sqrt(receiverCount * Math.PI) * phi;
+                
+                const x = receiverCenterX + receiverRadius * Math.sin(phi) * Math.cos(theta);
+                const y = receiverCenterY + receiverRadius * Math.sin(phi) * Math.sin(theta);
+                const z = receiverCenterZ + receiverRadius * Math.cos(phi);
+                
+                const receiver = createNode(
+                    NodeType.RECEIVER, 
+                    new THREE.Vector3(x, y, z), 
+                    0xff5e87,
+                    i == 0 ? 5 : 3.5 // 第一个节点稍大，可能成为实际接收者
+                );
+                nodes.push(receiver);
+                receiverGroup.push(receiver);
+            }
+            
+            // 随机选择一个接收方作为实际接收方
+            const receiverIndex = Math.floor(Math.random() * receiverGroup.length);
+            actualReceiver = receiverGroup[receiverIndex];
+            actualReceiver.type = NodeType.ACTUAL_RECEIVER;
+            
+            // 创建接入点 AP - 靠近接收方群组
+            const apCount = 3;
+            
+            for (let i = 0; i < apCount; i++) {
+                const angle = (i / apCount) * Math.PI * 2;
+                const apRadius = receiverRadius * 1.2;
+                
+                const x = receiverCenterX + apRadius * Math.cos(angle);
+                const y = receiverCenterY + apRadius * Math.sin(angle);
+                const z = receiverCenterZ + (Math.random() - 0.5) * 30;
+                
+                const ap = createNode(
+                    NodeType.ACCESS_POINT, 
+                    new THREE.Vector3(x, y, z), 
+                    0xffffff,
+                    4.5,
+                    'sphere'
+                );
+                nodes.push(ap);
+                accessPoints.push(ap);
+                
+                // 连接接入点和接收方群组
+                receiverGroup.forEach(receiver => {
+                    createLink(ap, receiver);
+                });
+            }
+            
+            // 创建路由节点之间的连接，形成网络
+            const routerNodes = nodes.filter(node => 
+                node.type === NodeType.ROUTER || node.type === NodeType.GATEWAY_ROUTER
+            );
+            
+            routerNodes.forEach((router, index) => {
+                // 每个节点至少与几个其他路由器连接
+                const connectCount = 2 + Math.floor(Math.random() * 3);
+                const connectedIndices = new Set();
+                
+                for (let j = 0; j < connectCount; j++) {
+                    // 随机选择其他路由器
+                    let targetIdx;
+                    do {
+                        targetIdx = Math.floor(Math.random() * routerNodes.length);
+                    } while (targetIdx === index || connectedIndices.has(targetIdx));
+                    
+                    connectedIndices.add(targetIdx);
+                    createLink(router, routerNodes[targetIdx]);
+                }
+            });
+            
+            // 确保门户路由器与其他路由器有足够连接
+            const gatewayConnections = 5 + Math.floor(Math.random() * 3);
+            const otherRouters = routerNodes.filter(router => router !== gatewayRouter);
+            
+            for (let i = 0; i < gatewayConnections; i++) {
+                if (i < otherRouters.length) {
+                    createLink(gatewayRouter, otherRouters[i]);
+                }
+            }
+            
+            // 确保接入点与路由器有连接
+            accessPoints.forEach(ap => {
+                const apConnections = 3 + Math.floor(Math.random() * 2);
+                
+                for (let i = 0; i < apConnections; i++) {
+                    const targetRouter = routerNodes[Math.floor(Math.random() * routerNodes.length)];
+                    createLink(ap, targetRouter);
+                }
+            });
+        }
+        
+        // 创建节点
+        function createNode(type, position, color, size = 3.5, shape = 'sphere') {
+            let geometry;
+            
+            switch (shape) {
+                case 'box':
+                    geometry = new THREE.BoxGeometry(size, size, size);
+                    break;
+                case 'sphere':
+                    geometry = new THREE.SphereGeometry(size, 16, 16);
+                    break;
+                case 'octahedron':
+                    geometry = new THREE.OctahedronGeometry(size);
+                    break;
+                case 'tetrahedron':
+                    geometry = new THREE.TetrahedronGeometry(size);
+                    break;
+                case 'dodecahedron':
+                    geometry = new THREE.DodecahedronGeometry(size);
+                    break;
+                default:
+                    geometry = new THREE.SphereGeometry(size, 16, 16);
+            }
+            
+            const material = new THREE.MeshPhongMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.9,
+                specular: 0xffffff,
+                shininess: 40
+            });
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.copy(position);
+            
+            // 添加发光效果，但不为群签名点添加
+            if (type !== NodeType.GROUP_POINT) {
+                const glow = new THREE.Mesh(
+                    geometry.clone(),
+                    new THREE.MeshBasicMaterial({
+                        color: color,
+                        transparent: true,
+                        opacity: 0.3,
+                    })
+                );
+                glow.scale.multiplyScalar(1.3);
+                mesh.add(glow);
+            }
+            
+            scene.add(mesh);
+            
+            return {
+                type: type,
+                position: position,
+                mesh: mesh,
+                material: material,
+                originalColor: color,
+                connections: []
+            };
+        }
+        
+        // 创建连接
+        function createLink(node1, node2) {
+            // 检查是否已经存在连接
+            for (const link of links) {
+                if ((link.from === node1 && link.to === node2) ||
+                    (link.from === node2 && link.to === node1)) {
+                    return;
+                }
+            }
+            
+            const geometry = new THREE.BufferGeometry().setFromPoints([
+                node1.position,
+                node2.position
+            ]);
+            
+            // 使用白色线条
+            const material = new THREE.LineBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.2
+            });
+            
+            const line = new THREE.Line(geometry, material);
+            scene.add(line);
+            
+            const link = {
+                from: node1,
+                to: node2,
+                line: line,
+                material: material,
+                geometry: geometry,
+                active: false
+            };
+            
+            links.push(link);
+            node1.connections.push(node2);
+            node2.connections.push(node1);
+            
+            return link;
+        }
+        
+        // 窗口大小变化时调整
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // 动画循环
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // 更新控制器
+            controls.update();
+            
+            // 脉动群签名效果
+            if (groupSignatureSphere) {
+                const time = Date.now() * 0.001;
+                const scale = 1 + 0.05 * Math.sin(time);
+                groupSignatureSphere.scale.set(scale, scale, scale);
+            }
+            
+            // 更新节点旋转
+            nodes.forEach(node => {
+                if (node.type === NodeType.ROUTER || node.type === NodeType.GATEWAY_ROUTER) {
+                    node.mesh.rotation.x += 0.005;
+                    node.mesh.rotation.y += 0.01;
+                }
+                else if (node.type === NodeType.ACCESS_POINT) {
+                    node.mesh.rotation.y += 0.015;
+                }
+            });
+            
+            // 更新数据包动画
+            updateDataParts();
+            
+            // 更新流量混淆效果
+            updateObfuscationEffects();
+            
+            renderer.render(scene, camera);
+        }
+        
+        // 更新数据包动画
+        function updateDataParts() {
+            for (let i = dataParts.length - 1; i >= 0; i--) {
+                const part = dataParts[i];
+                part.time += 0.01;
+                
+                if (part.time >= 1) {
+                    // 达到目标节点
+                    scene.remove(part.mesh);
+                    
+                    // 如果有下一个节点，创建新的数据包
+                    if (part.nextNode) {
+                        createDataPart(part.currentNode, part.nextNode, part.path, part.pathIndex + 1, part.color);
+                    }
+                    
+                    // 目标节点闪烁
+                    flashNode(part.currentNode);
+                    
+                    // 如果是多路径路由阶段并且是路由节点，添加流量混淆效果
+                    if (currentStep === 2 && (part.currentNode.type === NodeType.ROUTER || part.currentNode.type === NodeType.GATEWAY_ROUTER)) {
+                        createObfuscationEffect(part.currentNode.position.clone(), part.color);
+                    }
+                    
+                    // 移除当前数据包
+                    dataParts.splice(i, 1);
+                    
+                    // 移除数据指示器
+                    if (part.indicator) {
+                        document.body.removeChild(part.indicator);
+                    }
+                } else {
+                    // 更新数据包位置
+                    const newPos = new THREE.Vector3();
+                    newPos.lerpVectors(part.fromPos, part.toPos, part.time);
+                    part.mesh.position.copy(newPos);
+                    
+                    // 更新数据指示器
+                    if (part.indicator) {
+                        const screenPos = getScreenPosition(part.mesh.position);
+                        part.indicator.style.left = screenPos.x + 'px';
+                        part.indicator.style.top = screenPos.y + 'px';
+                    }
+                }
+            }
+        }
+        
+        // 创建流量混淆效果
+        function createObfuscationEffect(position, color) {
+            // 只在多路径路由阶段添加混淆效果
+            if (currentStep !== 2) return;
+            
+            const effect = document.createElement('div');
+            effect.className = 'obfuscation-effect';
+            
+            // 获取位置在屏幕上的投影
+            const screenPos = getScreenPosition(position);
+            
+            effect.style.left = screenPos.x + 'px';
+            effect.style.top = screenPos.y + 'px';
+            effect.style.width = '100px';
+            effect.style.height = '100px';
+            effect.style.background = `radial-gradient(circle, ${hexToRgba(color, 0.2)} 0%, rgba(0,0,0,0) 70%)`;
+            
+            document.body.appendChild(effect);
+            
+            // 存储效果信息
+            obfuscationEffects.push({
+                element: effect,
+                position: position,
+                timeCreated: Date.now(),
+                duration: 2000 + Math.random() * 1000
+            });
+        }
+        
+        // 更新所有流量混淆效果
+        function updateObfuscationEffects() {
+            const currentTime = Date.now();
+            
+            for (let i = obfuscationEffects.length - 1; i >= 0; i--) {
+                const effect = obfuscationEffects[i];
+                const timeElapsed = currentTime - effect.timeCreated;
+                
+                // 如果效果已经持续足够长时间，移除它
+                if (timeElapsed > effect.duration) {
+                    document.body.removeChild(effect.element);
+                    obfuscationEffects.splice(i, 1);
+                }
+                else {
+                    // 更新位置
+                    const screenPos = getScreenPosition(effect.position);
+                    effect.element.style.left = screenPos.x + 'px';
+                    effect.element.style.top = screenPos.y + 'px';
+                    
+                    // 根据效果持续时间计算不透明度
+                    const opacity = 1 - (timeElapsed / effect.duration);
+                    effect.element.style.opacity = opacity;
+                }
+            }
+        }
+        
+        // 创建数据包
+        function createDataPart(fromNode, toNode, path, pathIndex, color = 0x5e9cf9) {
+            const geometry = new THREE.SphereGeometry(1.2, 8, 8);
+            const material = new THREE.MeshPhongMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.8,
+                emissive: color,
+                emissiveIntensity: 0.5
+            });
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.copy(fromNode.position);
+            scene.add(mesh);
+            
+            // 激活路径上的连接
+            links.forEach(link => {
+                if ((link.from === fromNode && link.to === toNode) ||
+                    (link.from === toNode && link.to === fromNode)) {
+                    link.active = true;
+                    link.material.color.set(color);
+                    link.material.opacity = 0.6;
+                }
+            });
+            
+            // 确定下一个节点
+            let nextNode = null;
+            if (path && pathIndex < path.length - 1) {
+                nextNode = path[pathIndex + 1];
+            }
+            
+            // 创建数据指示器
+            let indicator = null;
+            if (currentStep === 2) { // 只在路由步骤显示流量信息
+                indicator = document.createElement('div');
+                indicator.className = 'data-indicator visible';
+                
+                // 根据当前路由步骤显示不同的数据包信息
+                if (color === 0x5e9cf9) {
+                    indicator.textContent = '群签名数据流';
+                    indicator.style.color = '#5e9cf9';
+                } else if (color === 0xe650de) {
+                    indicator.textContent = '加密分片数据';
+                    indicator.style.color = '#e650de';
+                } else if (color === 0xf9ce5e) {
+                    indicator.textContent = 'GAN混淆流量';
+                    indicator.style.color = '#f9ce5e';
+                } else {
+                    indicator.textContent = '数据包';
+                    indicator.style.color = '#ffffff';
+                }
+                
+                document.body.appendChild(indicator);
+            }
+            
+            dataParts.push({
+                mesh: mesh,
+                fromPos: fromNode.position.clone(),
+                toPos: toNode.position.clone(),
+                currentNode: toNode,
+                nextNode: nextNode,
+                path: path,
+                pathIndex: pathIndex,
+                time: 0,
+                color: color,
+                indicator: indicator
+            });
+        }
+        
+        // 节点闪烁效果
+        function flashNode(node) {
+            const originalColor = node.originalColor;
+            const flashColor = 0xffffff;
+            
+            // 闪烁效果
+            node.material.color.set(flashColor);
+            node.material.emissive = new THREE.Color(flashColor);
+            node.material.emissiveIntensity = 1;
+            
+            setTimeout(() => {
+                node.material.color.set(originalColor);
+                node.material.emissive = new THREE.Color(0x000000);
+                node.material.emissiveIntensity = 0;
+            }, 300);
+        }
+        
+        // 获取屏幕位置
+        function getScreenPosition(position) {
+            const vector = position.clone();
+            vector.project(camera);
+            
+            return {
+                x: (vector.x * 0.5 + 0.5) * window.innerWidth,
+                y: (- vector.y * 0.5 + 0.5) * window.innerHeight
+            };
+        }
+        
+        // 16进制颜色转RGBA
+        function hexToRgba(hex, alpha) {
+            const r = (hex >> 16) & 255;
+            const g = (hex >> 8) & 255;
+            const b = hex & 255;
+            
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        
+        // 显示步骤
+        function showStep(stepId) {
+            // 如果动画正在进行中，不允许切换步骤
+            if (animationInProgress) return;
+            
+            // 更新当前步骤
+            currentStep = stepId;
+            
+            // 更新步骤UI
+            document.querySelectorAll('.step').forEach(step => {
+                const id = parseInt(step.getAttribute('data-step'));
+                if (id === stepId) {
+                    step.classList.add('active');
+                } else {
+                    step.classList.remove('active');
+                }
+            });
+            
+            // 重置网络状态
+            resetNetworkState();
+            
+            // 根据步骤调整相机位置
+            switch (stepId) {
+                case 1: // 群签名加密
+                    camera.position.set(-150, 50, 200);
+                    break;
+                case 2: // 自适应多路径路由
+                    camera.position.set(0, 100, 250);
+                    break;
+                case 3: // 广播接收与解密
+                    camera.position.set(150, 50, 200);
+                    break;
+            }
+            
+            controls.update();
+        }
+        
+        // 重置网络状态
+        function resetNetworkState() {
+            // 清除所有数据包
+            dataParts.forEach(part => {
+                scene.remove(part.mesh);
+                if (part.indicator) {
+                    document.body.removeChild(part.indicator);
+                }
+            });
+            dataParts = [];
+            
+            // 清除所有混淆效果
+            obfuscationEffects.forEach(effect => {
+                document.body.removeChild(effect.element);
+            });
+            obfuscationEffects = [];
+            
+            // 重置连接状态
+            links.forEach(link => {
+                link.active = false;
+                link.material.color.set(0xffffff);
+                link.material.opacity = 0.2;
+            });
+            
+            // 重置节点颜色
+            nodes.forEach(node => {
+                node.material.color.set(node.originalColor);
+                node.material.emissive = new THREE.Color(0x000000);
+                node.material.emissiveIntensity = 0;
+            });
+            
+            // 隐藏信息面板
+            document.getElementById('info-panel').classList.remove('visible');
+            
+            // 清除数据指示器
+            const indicators = document.querySelectorAll('.data-indicator');
+            indicators.forEach(indicator => {
+                if (indicator.id !== 'data-indicator') {
+                    document.body.removeChild(indicator);
+                }
+            });
+        }
+        
+        // 开始模拟
+        function startSimulation() {
+            if (animationInProgress) return;
+            animationInProgress = true;
+            
+            // 重置网络状态
+            resetNetworkState();
+            
+            // 根据当前步骤执行不同的模拟
+            switch (currentStep) {
+                case 1: // 群签名加密
+                    simulateGroupSignatureEncryption();
+                    break;
+                case 2: // 自适应多路径路由
+                    simulateMultipathRouting();
+                    break;
+                case 3: // 广播接收与解密
+                    simulateBroadcastReceive();
+                    break;
+            }
+            
+            // 模拟完成后重置状态
+            setTimeout(() => {
+                animationInProgress = false;
+            }, 10000); // 10秒后可以重新开始模拟
+        }
+        
+        // 模拟群签名加密
+        function simulateGroupSignatureEncryption() {
+            const infoPanel = document.getElementById('info-panel');
+            const infoContent = document.getElementById('info-content');
+            
+            // 闪烁发送方群组
+            senderGroup.forEach(sender => flashNode(sender));
+            
+            // 强调群签名效果
+            if (groupSignatureSphere) {
+                const originalOpacity = groupSignatureSphere.material.opacity;
+                groupSignatureSphere.material.opacity = 0.3;
+                
+                setTimeout(() => {
+                    groupSignatureSphere.material.opacity = originalOpacity;
+                }, 1500);
+            }
+            
+            // 显示群签名信息
+            infoPanel.classList.add('visible');
+            document.getElementById('info-title').textContent = '群签名加密';
+            
+            infoContent.innerHTML = `
+                <div style="margin-bottom: 10px;">
+                    <span>群成员: ${senderGroup.length}个节点</span>
+                </div>
+                
+                <div style="font-family: monospace; font-size: 0.8rem; margin-bottom: 10px;">
+                    生成群签名...<br>
+                    二进制流转换中...<br>
+                    RSA-2048加密中...<br>
+                </div>
+                
+                <div style="margin-top: 10px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>群签名:</span>
+                        <span id="group-sig-status">生成中...</span>
+                    </div>
+                    <div style="height: 5px; background: #2a2a40; border-radius: 5px; margin: 5px 0;">
+                        <div id="group-sig-progress" style="height: 100%; width: 0%; background: #5e9cf9; border-radius: 5px;"></div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 10px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>二进制转换:</span>
+                        <span id="binary-status">等待中...</span>
+                    </div>
+                    <div style="height: 5px; background: #2a2a40; border-radius: 5px; margin: 5px 0;">
+                        <div id="binary-progress" style="height: 100%; width: 0%; background: #5e9cf9; border-radius: 5px;"></div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 10px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>加密:</span>
+                        <span id="encrypt-status">等待中...</span>
+                    </div>
+                    <div style="height: 5px; background: #2a2a40; border-radius: 5px; margin: 5px 0;">
+                        <div id="encrypt-progress" style="height: 100%; width: 0%; background: #e650de; border-radius: 5px;"></div>
+                    </div>
+                </div>
+            `;
+            
+            // 模拟群签名进度
+            let groupSigProgress = 0;
+            const groupSigInterval = setInterval(() => {
+                groupSigProgress += 5;
+                document.getElementById('group-sig-progress').style.width = `${groupSigProgress}%`;
+                
+                if (groupSigProgress >= 100) {
+                    clearInterval(groupSigInterval);
+                    document.getElementById('group-sig-status').textContent = '完成';
+                    document.getElementById('binary-status').textContent = '进行中...';
+                    
+                    // 闪烁实际发送方
+                    flashNode(actualSender);
+                    
+                    // 模拟二进制转换进度
+                    let binaryProgress = 0;
+                    const binaryInterval = setInterval(() => {
+                        binaryProgress += 7;
+                        document.getElementById('binary-progress').style.width = `${binaryProgress}%`;
+                        
+                        if (binaryProgress >= 100) {
+                            clearInterval(binaryInterval);
+                            document.getElementById('binary-status').textContent = '完成';
+                            document.getElementById('encrypt-status').textContent = '进行中...';
+                            
+                            // 模拟加密进度
+                            let encryptProgress = 0;
+                            const encryptInterval = setInterval(() => {
+                                encryptProgress += 5;
+                                document.getElementById('encrypt-progress').style.width = `${encryptProgress}%`;
+                                
+                                if (encryptProgress >= 100) {
+                                    clearInterval(encryptInterval);
+                                    document.getElementById('encrypt-status').textContent = '完成';
+                                    
+                                    // 添加群签名信息
+                                    const sigInfo = document.createElement('div');
+                                    sigInfo.style.marginTop = '15px';
+                                    sigInfo.style.padding = '8px';
+                                    sigInfo.style.background = 'rgba(94, 156, 249, 0.1)';
+                                    sigInfo.style.borderLeft = '2px solid #5e9cf9';
+                                    sigInfo.innerHTML = `
+                                        <div style="font-weight: bold; margin-bottom: 5px; color: #5e9cf9;">群签名特性</div>
+                                        <div style="font-size: 0.8rem; margin-bottom: 3px;">匿名性: 隐藏实际发送者</div>
+                                        <div style="font-size: 0.8rem; margin-bottom: 3px;">不可伪造: 只有群成员可签名</div>
+                                        <div style="font-size: 0.8rem;">不可关联: 签名无法被追踪</div>
+                                    `;
+                                    infoContent.appendChild(sigInfo);
+                                    
+                                    // 先从实际发送方发送数据到群签名点
+                                    setTimeout(() => {
+                                        // 发送数据到群签名点
+                                        createDataPart(actualSender, groupSignaturePoint, [actualSender, groupSignaturePoint], 0, 0x5e9cf9);
+                                        
+                                        // 随机选择几个其他发送方也向群签名点发送数据
+                                        const otherSenders = senderGroup.filter(s => s !== actualSender);
+                                        const randomCount = Math.min(2, otherSenders.length);
+                                        
+                                        for (let i = 0; i < randomCount; i++) {
+                                            const randomIndex = Math.floor(Math.random() * otherSenders.length);
+                                            const randomSender = otherSenders.splice(randomIndex, 1)[0];
+                                            
+                                            setTimeout(() => {
+                                                createDataPart(randomSender, groupSignaturePoint, [randomSender, groupSignaturePoint], 0, 0x5e9cf9);
+                                            }, 300 + i * 300);
+                                        }
+                                        
+                                        // 从群签名点发送到门户路由器
+                                        setTimeout(() => {
+                                            // 发送群签名数据包
+                                            createDataPart(groupSignaturePoint, gatewayRouter, [groupSignaturePoint, gatewayRouter], 0, 0x5e9cf9);
+                                            
+                                            // 发送加密数据包
+                                            setTimeout(() => {
+                                                createDataPart(groupSignaturePoint, gatewayRouter, [groupSignaturePoint, gatewayRouter], 0, 0xe650de);
+                                            }, 700);
+                                        }, 1500);
+                                    }, 800);
+                                }
+                            }, 50);
+                        }
+                    }, 40);
+                }
+            }, 40);
+        }
+        
+        // 模拟多路径路由
+        function simulateMultipathRouting() {
+            const infoPanel = document.getElementById('info-panel');
+            const infoContent = document.getElementById('info-content');
+            
+            // 闪烁门户路由器
+            flashNode(gatewayRouter);
+            
+            // 显示路由信息
+            infoPanel.classList.add('visible');
+            document.getElementById('info-title').textContent = '数据分片与多路径路由';
+            
+            infoContent.innerHTML = `
+                <div style="margin-bottom: 10px;">
+                    <span>网络拓扑分析中...</span>
+                </div>
+                
+                <div style="font-family: monospace; font-size: 0.8rem; margin-bottom: 10px;">
+                    验证群签名...<br>
+                    数据分片: 6个片段<br>
+                    多路径路由准备中...<br>
+                </div>
+                
+                <div style="margin-top: 10px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>签名验证:</span>
+                        <span id="verify-status">验证中...</span>
+                    </div>
+                    <div style="height: 5px; background: #2a2a40; border-radius: 5px; margin: 5px 0;">
+                        <div id="verify-progress" style="height: 100%; width: 0%; background: #f9ce5e; border-radius: 5px;"></div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 10px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>数据分片:</span>
+                        <span id="sharding-status">等待中...</span>
+                    </div>
+                    <div style="height: 5px; background: #2a2a40; border-radius: 5px; margin: 5px 0;">
+                        <div id="sharding-progress" style="height: 100%; width: 0%; background: #f9ce5e; border-radius: 5px;"></div>
+                    </div>
+                </div>
+                
+                <div id="paths-container" style="margin-top: 15px;">
+                    <div style="font-weight: bold; margin-bottom: 8px;">分片路由路径:</div>
+                </div>
+            `;
+            
+            // 模拟签名验证进度
+            let verifyProgress = 0;
+            const verifyInterval = setInterval(() => {
+                verifyProgress += 5;
+                document.getElementById('verify-progress').style.width = `${verifyProgress}%`;
+                
+                if (verifyProgress >= 100) {
+                    clearInterval(verifyInterval);
+                    document.getElementById('verify-status').textContent = '已验证';
+                    document.getElementById('sharding-status').textContent = '分片中...';
+                    
+                    // 模拟数据分片进度
+                    let shardingProgress = 0;
+                    const shardingInterval = setInterval(() => {
+                        shardingProgress += 5;
+                        document.getElementById('sharding-progress').style.width = `${shardingProgress}%`;
+                        
+                        if (shardingProgress >= 100) {
+                            clearInterval(shardingInterval);
+                            document.getElementById('sharding-status').textContent = '完成';
+                            
+                            // 生成多条路径
+                            const pathsCount = 6; // 分片数量
+                            const paths = generateMultiplePaths(gatewayRouter, accessPoints, pathsCount);
+                            
+                            // 更新路径信息
+                            const pathsContainer = document.getElementById('paths-container');
+                            
+                            paths.forEach((path, index) => {
+                                const pathItem = document.createElement('div');
+                                pathItem.style.marginBottom = '10px';
+                                
+                                const pathHeader = document.createElement('div');
+                                pathHeader.style.display = 'flex';
+                                pathHeader.style.justifyContent = 'space-between';
+                                pathHeader.style.marginBottom = '5px';
+                                pathHeader.innerHTML = `
+                                    <span>分片 ${index + 1}:</span>
+                                    <span style="color: #e650de;">${path.length}个节点</span>
+                                `;
+                                pathItem.appendChild(pathHeader);
+                                
+                                // 添加路径可视化进度条
+                                const progressBar = document.createElement('div');
+                                progressBar.style.height = '3px';
+                                progressBar.style.background = '#2a2a40';
+                                progressBar.style.borderRadius = '3px';
+                                progressBar.innerHTML = `<div id="path-progress-${index}" style="height: 100%; width: 0%; background: #e650de; border-radius: 3px;"></div>`;
+                                pathItem.appendChild(progressBar);
+                                
+                                pathsContainer.appendChild(pathItem);
+                                
+                                // 发送数据分片
+                                setTimeout(() => {
+                                    // 创建初始数据包
+                                    createDataPart(path[0], path[1], path, 0, 0xe650de);
+                                    
+                                    // 模拟路径进度
+                                    let pathProgress = 0;
+                                    const progressInterval = setInterval(() => {
+                                        pathProgress += 3;
+                                        document.getElementById(`path-progress-${index}`).style.width = `${pathProgress}%`;
+                                        
+                                        if (pathProgress >= 100) {
+                                            clearInterval(progressInterval);
+                                        }
+                                    }, 100);
+                                    
+                                    // 如果是最后一个分片路径，添加GAN混淆信息
+                                    if (index === paths.length - 1) {
+                                        setTimeout(() => {
+                                            // 添加GAN混淆信息
+                                            const obfuscationInfo = document.createElement('div');
+                                            obfuscationInfo.style.marginTop = '15px';
+                                            obfuscationInfo.style.padding = '8px';
+                                            obfuscationInfo.style.background = 'rgba(249, 206, 94, 0.1)';
+                                            obfuscationInfo.style.borderLeft = '2px solid #f9ce5e';
+                                            obfuscationInfo.innerHTML = `
+                                                <div style="font-weight: bold; margin-bottom: 5px; color: #f9ce5e;">GAN混淆流量生成</div>
+                                                <div style="font-size: 0.8rem; margin-bottom: 3px;">特征相似度: 95%</div>
+                                                <div style="font-size: 0.8rem; margin-bottom: 3px;">流量伪装: 普通网络流量</div>
+                                                <div style="font-size: 0.8rem;">攻击抗性: 高</div>
+                                            `;
+                                            pathsContainer.appendChild(obfuscationInfo);
+                                            
+                                            // 创建混淆数据包
+                                            createMixedTraffic();
+                                        }, 1500);
+                                    }
+                                }, index * 300);
+                            });
+                        }
+                    }, 40);
+                }
+            }, 40);
+        }
+        
+        // 创建混淆流量
+        function createMixedTraffic() {
+            const routerNodes = nodes.filter(node => node.type === NodeType.ROUTER);
+            
+            for (let i = 0; i < 8; i++) {
+                setTimeout(() => {
+                    // 随机选择两个路由节点
+                    const sourceIdx = Math.floor(Math.random() * routerNodes.length);
+                    let targetIdx;
+                    do {
+                        targetIdx = Math.floor(Math.random() * routerNodes.length);
+                    } while (targetIdx === sourceIdx);
+                    
+                    // 创建混淆流量数据包
+                    createDataPart(
+                        routerNodes[sourceIdx], 
+                        routerNodes[targetIdx], 
+                        [routerNodes[sourceIdx], routerNodes[targetIdx]], 
+                        0, 
+                        0xf9ce5e
+                    );
+                }, i * 300);
+            }
+        }
+        
+        // 模拟广播接收
+        function simulateBroadcastReceive() {
+            const infoPanel = document.getElementById('info-panel');
+            const infoContent = document.getElementById('info-content');
+            
+            // 闪烁接入点
+            accessPoints.forEach(ap => flashNode(ap));
+            
+            // 显示广播信息
+            infoPanel.classList.add('visible');
+            document.getElementById('info-title').textContent = '广播接收与解密';
+            
+            infoContent.innerHTML = `
+                <div style="margin-bottom: 10px;">
+                    <span>广播模式: 激活</span>
+                </div>
+                
+                <div style="font-family: monospace; font-size: 0.8rem; margin-bottom: 10px;">
+                    接入点准备中...<br>
+                    潜在接收方: ${receiverGroup.length}<br>
+                    广播验证中...<br>
+                </div>
+                
+                <div style="margin-top: 10px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>广播准备:</span>
+                        <span id="broadcast-status">初始化...</span>
+                    </div>
+                    <div style="height: 5px; background: #2a2a40; border-radius: 5px; margin: 5px 0;">
+                        <div id="broadcast-progress" style="height: 100%; width: 0%; background: #ffffff; border-radius: 5px;"></div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 10px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>接收验证:</span>
+                        <span id="validate-status">等待中...</span>
+                    </div>
+                    <div style="height: 5px; background: #2a2a40; border-radius: 5px; margin: 5px 0;">
+                        <div id="validate-progress" style="height: 100%; width: 0%; background: #ff5e87; border-radius: 5px;"></div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 10px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>数据组装:</span>
+                        <span id="assemble-status">等待中...</span>
+                    </div>
+                    <div style="height: 5px; background: #2a2a40; border-radius: 5px; margin: 5px 0;">
+                        <div id="assemble-progress" style="height: 100%; width: 0%; background: #ff5e87; border-radius: 5px;"></div>
+                    </div>
+                </div>
+            `;
+            
+            // 模拟广播准备进度
+            let broadcastProgress = 0;
+            const broadcastInterval = setInterval(() => {
+                broadcastProgress += 5;
+                document.getElementById('broadcast-progress').style.width = `${broadcastProgress}%`;
+                
+                if (broadcastProgress >= 100) {
+                    clearInterval(broadcastInterval);
+                    document.getElementById('broadcast-status').textContent = '就绪';
+                    
+                    // 发送广播包到所有接收方
+                    setTimeout(() => {
+                        accessPoints.forEach((ap, apIndex) => {
+                            // 从每个AP向所有接收方发送广播包
+                            receiverGroup.forEach((receiver, idx) => {
+                                setTimeout(() => {
+                                    createDataPart(ap, receiver, [ap, receiver], 0, 0xffffff);
+                                    
+                                    // 更新接收验证状态
+                                    const progress = ((apIndex * receiverGroup.length + idx + 1) / (accessPoints.length * receiverGroup.length)) * 100;
+                                    document.getElementById('validate-status').textContent = '验证中...';
+                                    document.getElementById('validate-progress').style.width = `${progress}%`;
+                                    
+                                    if (progress >= 100) {
+                                        document.getElementById('validate-status').textContent = '完成';
+                                        document.getElementById('assemble-status').textContent = '组装中...';
+                                        
+                                        // 闪烁实际接收方
+                                        flashNode(actualReceiver);
+                                        
+                                        // 组装数据进度
+                                        let assembleProgress = 0;
+                                        const assembleInterval = setInterval(() => {
+                                            assembleProgress += 4;
+                                            document.getElementById('assemble-progress').style.width = `${assembleProgress}%`;
+                                            
+                                            if (assembleProgress >= 100) {
+                                                clearInterval(assembleInterval);
+                                                document.getElementById('assemble-status').textContent = '完成';
+                                                
+                                                // 添加接收完成的消息
+                                                const completeInfo = document.createElement('div');
+                                                completeInfo.style.marginTop = '15px';
+                                                completeInfo.style.padding = '8px';
+                                                completeInfo.style.background = 'rgba(255, 94, 135, 0.1)';
+                                                completeInfo.style.borderLeft = '2px solid #ff5e87';
+                                                completeInfo.innerHTML = `
+                                                    <div style="font-weight: bold; margin-bottom: 5px; color: #ff5e87;">接收完成</div>
+                                                    <div style="font-size: 0.8rem; margin-bottom: 3px;">验证状态: 通过</div>
+                                                    <div style="font-size: 0.8rem; margin-bottom: 3px;">匿名性保护: 完整</div>
+                                                    <div style="font-size: 0.8rem;">安全状态: 高</div>
+                                                `;
+                                                infoContent.appendChild(completeInfo);
+                                                
+                                                // 高亮真实接收方节点
+                                                actualReceiver.material.emissive = new THREE.Color(0xff5e87);
+                                                actualReceiver.material.emissiveIntensity = 0.7;
+                                                
+                                                // 向实际接收方发送数据
+                                                accessPoints.forEach((ap, i) => {
+                                                    setTimeout(() => {
+                                                        createDataPart(ap, actualReceiver, [ap, actualReceiver], 0, 0xff5e87);
+                                                    }, i * 300);
+                                                });
+                                            }
+                                        }, 50);
+                                    }
+                                }, idx * 200 + apIndex * 300);
+                            });
+                        });
+                    }, 1000);
+                }
+            }, 40);
+        }
+        
+        // 生成从源节点到多个目标中某个的多条路径
+        function generateMultiplePaths(source, targets, pathCount) {
+            const paths = [];
+            const routerNodes = nodes.filter(node => node.type === NodeType.ROUTER);
+            
+            for (let i = 0; i < pathCount; i++) {
+                // 为每条路径随机选择一个目标
+                const target = targets[Math.floor(Math.random() * targets.length)];
+                
+                // 生成路径 - 选择中间路由器
+                const path = [source];
+                
+                // 添加2-4个中间路由器
+                const routerCount = 2 + Math.floor(Math.random() * 3);
+                const usedRouters = new Set();
+                
+                for (let j = 0; j < routerCount; j++) {
+                    let randomRouter;
+                    do {
+                        randomRouter = routerNodes[Math.floor(Math.random() * routerNodes.length)];
+                    } while (usedRouters.has(randomRouter));
+                    
+                    usedRouters.add(randomRouter);
+                    path.push(randomRouter);
+                }
+                
+                // 添加目标作为路径的最后一个节点
+                path.push(target);
+                
+                paths.push(path);
+            }
+            
+            return paths;
+        }
+        
+        // 重置模拟
+        function resetSimulation() {
+            // 重置网络状态
+            resetNetworkState();
+            
+            // 重置动画状态
+            animationInProgress = false;
+        }
+        
+        // 页面加载时初始化
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
