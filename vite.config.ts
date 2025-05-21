@@ -32,7 +32,18 @@ export default defineConfig({
   },
   // 如果你想开启构建后文件名带hash，默认就带hash，这里不需要特别配置
   build: {
-    // assetsDir: 'assets', // 默认就是assets目录
-    // sourcemap: false, // 生产环境关闭sourcemap减少体积
+    // 确保资源路径正确
+    assetsDir: 'assets',
+    // 生成 sourcemap
+    sourcemap: true,
+    // 分块策略
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor': ['vue', 'vue-router', 'pinia'],
+          'element-plus': ['element-plus']
+        }
+      }
+    }
   }
 });
