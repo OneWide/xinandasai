@@ -103,6 +103,7 @@ import { VueCropper } from 'vue-cropper';
 import 'vue-cropper/dist/index.css';
 import avatar from '@/assets/img/img.jpg';
 import TabsComp from '../element/tabs.vue';
+import { ElMessage } from 'element-plus';
 
 const name = localStorage.getItem('vuems_name');
 const form = reactive({
@@ -122,14 +123,35 @@ const cropper: any = ref();
 const setImage = (e: any) => {
     const file = e.target.files[0];
     if (!file.type.includes('image/')) {
+        ElMessage.error('请上传图片文件');
         return;
     }
-    const reader = new FileReader();
-    reader.onload = (event: any) => {
-        imgSrc.value = event.target.result;
-        cropper.value && cropper.value.replace(event.target.result);
+    
+    // 检查文件大小（2MB限制）
+    const isLt2M = file.size / 1024 / 1024 < 2;
+    if (!isLt2M) {
+        ElMessage.error('图片大小不能超过 2MB!');
+        return;
+    }
+
+    // 检查图片尺寸
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = () => {
+        const isLt500 = img.width <= 500 && img.height <= 500;
+        if (!isLt500) {
+            ElMessage.error('图片尺寸不能超过 500x500 像素!');
+            return;
+        }
+        
+        // 图片符合要求，继续处理
+        const reader = new FileReader();
+        reader.onload = (event: any) => {
+            imgSrc.value = event.target.result;
+            cropper.value && cropper.value.replace(event.target.result);
+        };
+        reader.readAsDataURL(file);
     };
-    reader.readAsDataURL(file);
 };
 
 const cropImage = () => {
